@@ -41,3 +41,20 @@ def get_note(note_id: int, db: sqlite3.Connection = Depends(get_db_connection)):
 	if row is None:
 		raise HTTPException(status_code=404, detail="Note not found")
 	return dict(row)
+
+@router.put("/{note_id}", response_model=NoteOut, status_code=200)    
+def update_note(note_id: int, note: NoteIn, db: sqlite3.Connection = Depends(get_db_connection)):
+	"""Fully Update a specific note by its ID."""
+	cursor = db.cursor()
+	cursor.execute("SELECT * FROM notes WHERE id = ?", (note_id,))
+	row = cursor.fetchone()
+
+	if row is None:
+		raise HTTPException(status_code=404, detail="Note not found")
+	cursor.execute("UPDATE notes SET title = ?, content = ?, completed = ? WHERE id = ?",(note.title, note.content, int(note.completed), note_id))
+	db.commit()
+
+	cursor.execute("SELECT * FROM notes WHERE id = ?", (note_id,))
+	row = cursor.fetchone()
+	return dict(row)
+

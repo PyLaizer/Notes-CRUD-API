@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from app.db import get_db_connection
 from app.schemas import NoteIn, NoteOut
+from typing import Optional
 import sqlite3
 
 router = APIRouter(prefix="/notes", tags=["notes"])
@@ -14,9 +15,18 @@ def create_note(note: NoteIn, db: sqlite3.Connection = Depends(get_db_connection
 	)
 	db.commit()
       
-  # Retrieve the newly inserted item record
 	note_id = cursor.lastrowid
 	cursor.execute("SELECT * FROM notes WHERE id = ?", (note_id,))
 	row = cursor.fetchone()
 	return dict(row)
     
+@router.get("/", response_model=list[NoteOut], status_code=200)    
+def get_notes(completed: Optional[bool] = Query(None), db: sqlite3.Connection = Depends(get_db_connection)):
+	"""Fetches all items from the database."""
+	cursor = db.cursor()
+	if completed is not None:
+		cursor.execute("SELECT * FROM notes WHERE completed = ?", (1 if completed else 0,))
+	else:
+		cursor.execute("SELECT * FROM notes")
+	rows = cursor.fetchall()
+	return [dict(row) for row in rows]

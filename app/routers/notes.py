@@ -30,3 +30,14 @@ def get_notes(completed: Optional[bool] = Query(None), db: sqlite3.Connection = 
 		cursor.execute("SELECT * FROM notes")
 	rows = cursor.fetchall()
 	return [dict(row) for row in rows]
+
+@router.get("/{note_id}", response_model=NoteOut, status_code=200)    
+def get_note(note_id: int, db: sqlite3.Connection = Depends(get_db_connection)):
+	"""Fetches  a specific note by its ID."""
+	cursor = db.cursor()
+	cursor.execute("SELECT * FROM notes WHERE id = ?", (note_id,))
+	row = cursor.fetchone()
+
+	if row is None:
+		raise HTTPException(status_code=404, detail="Note not found")
+	return dict(row)

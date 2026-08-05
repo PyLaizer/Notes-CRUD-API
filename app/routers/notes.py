@@ -88,3 +88,15 @@ def partial_update_note(note_id: int, note: NotePatch, db: sqlite3.Connection = 
 	row = cursor.fetchone()
 	return dict(row)
 
+@router.delete("/{note_id}", response_model=None, status_code=204) 
+def delete_note(note_id: int, db: sqlite3.Connection = Depends(get_db_connection)):
+	"""Delete a specific note by its ID."""
+	cursor = db.cursor()
+	cursor.execute("SELECT * FROM notes WHERE id = ?", (note_id,))
+	row = cursor.fetchone()
+
+	if row is None:
+		raise HTTPException(status_code=404, detail="Note not found")
+	cursor.execute("DELETE FROM notes WHERE id = ?", (note_id,))
+	db.commit()
+	return None

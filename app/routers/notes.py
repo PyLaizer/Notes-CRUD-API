@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 from app.db import get_db_connection
-from app.schemas import NoteIn, NoteOut
+from app.schemas import NoteIn, NoteOut, NotePatch
 from typing import Optional
 import sqlite3
 
@@ -52,6 +52,36 @@ def update_note(note_id: int, note: NoteIn, db: sqlite3.Connection = Depends(get
 	if row is None:
 		raise HTTPException(status_code=404, detail="Note not found")
 	cursor.execute("UPDATE notes SET title = ?, content = ?, completed = ? WHERE id = ?",(note.title, note.content, int(note.completed), note_id))
+	db.commit()
+
+	cursor.execute("SELECT * FROM notes WHERE id = ?", (note_id,))
+	row = cursor.fetchone()
+	return dict(row)
+
+@router.patch("/{note_id}", response_model=NoteOut, status_code=200)  
+def partial_update_note(note_id: int, note: NotePatch, db: sqlite3.Connection = Depends(get_db_connection)):
+	"""Partially Update a specific note by its ID."""
+	cursor = db.cursor()
+	cursor.execute("SELECT * FROM notes WHERE id = ?", (note_id,))
+	row = cursor.fetchone()
+
+	if row is None:
+		raise HTTPException(status_code=404, detail="Note not found")
+	current_data = dict(row)
+
+	update_data = note.model_dump(exclude_unset=True)
+	if not update_data:
+		return {"id": note_id, **current_data}
+	query_parts = []
+	query_values = []
+    
+	for key, value in update_data.items():
+			query_parts.append(f"{key} = ?")
+			query_values.append(value)
+
+	query_values.append(note_id)
+	sql_query = f"UPDATE notes SET {', '.join(query_parts)} WHERE id = ?"
+	cursor.execute(sql_query, tuple(query_values))
 	db.commit()
 
 	cursor.execute("SELECT * FROM notes WHERE id = ?", (note_id,))

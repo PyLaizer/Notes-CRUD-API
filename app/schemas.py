@@ -9,3 +9,8 @@ class NoteIn(BaseModel):
 class NoteOut(BaseModel): 
   id: int
   created_at: datetime
+
+class NotePatch(BaseModel):
+	title: str | None = None
+	content: str | None = None
+	completed: bool | None = None
